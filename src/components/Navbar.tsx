@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Home, CreditCard, User, Menu, X, Boxes, LogOut, Search, Heart } from 'lucide-react';
+import { Home, CreditCard, User, Menu, X, Boxes, LogOut, Search, Heart, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export type View = 'home' | 'showcase' | 'booking' | 'dashboard' | 'search' | 'saved';
+export type View = 'home' | 'showcase' | 'booking' | 'dashboard' | 'search' | 'saved' | 'mentor';
 
 interface NavbarProps {
   currentView: View;
@@ -31,8 +31,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   // Renter nav items
   const renterNavItems = [
     { id: 'home' as View, label: 'Trang chủ', icon: Home },
-    { id: 'search' as View, label: 'Tìm kiếm phòng trọ', icon: Search },
-    { id: 'saved' as View, label: 'Phòng đã lưu', icon: Heart },
+    { id: 'mentor' as View, label: 'Mentor', icon: MessageCircle },
   ];
 
   const navItems = user?.role === 'renter' ? renterNavItems : landlordNavItems;

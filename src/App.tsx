@@ -11,6 +11,7 @@ import DashboardPage from './views/DashboardPage';
 import RenterDashboardPage from './views/RenterDashboardPage';
 import RenterHomePage from './views/RenterHomePage';
 import SavedRoomsPage from './views/SavedRoomsPage';
+import MentorChatPage from './views/MentorChatPage';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -69,6 +70,8 @@ const AppContent: React.FC = () => {
           return <RenterHomePage />;
         case 'saved':
           return <SavedRoomsPage />;
+        case 'mentor':
+          return <MentorChatPage onBack={() => handleNavigate('home')} />;
         default:
           return <RenterDashboardPage onNavigate={handleNavigate} />;
       }
