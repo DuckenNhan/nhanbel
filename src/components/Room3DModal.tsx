@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Ruler, RotateCcw, Info, Maximize2, Bed, Bath } from 'lucide-react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { OrbitControls, Edges, Html, Grid } from '@react-three/drei';
+import * as THREE from 'three';
+import { X, Ruler, RotateCcw, Info, Maximize2, Bed, Bath, MousePointerClick } from 'lucide-react';
 import { RoomListing, formatCurrency, AMENITIES } from '../utils/helpers';
 
 interface Room3DModalProps {
@@ -7,281 +10,293 @@ interface Room3DModalProps {
   onClose: () => void;
 }
 
-interface Measurement {
-  x: number;
-  y: number;
+interface MeasurementMarker {
+  id: string;
+  position: [number, number, number];
   label: string;
   value: string;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Scene Components
+   ───────────────────────────────────────────────────────────── */
+
+function Floor() {
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.8} metalness={0.1} />
+      </mesh>
+      <Grid
+        position={[0, 0.01, 0]}
+        args={[20, 20]}
+        cellSize={1}
+        cellThickness={0.6}
+        cellColor="#3b82f6"
+        sectionSize={5}
+        sectionThickness={1.2}
+        sectionColor="#60a5fa"
+        fadeDistance={25}
+        fadeStrength={1}
+        infiniteGrid={false}
+      />
+    </group>
+  );
+}
+
+function Wall({
+  position,
+  size,
+  rotation = [0, 0, 0],
+  color = '#3b82f6',
+  opacity = 0.25,
+}: {
+  position: [number, number, number];
+  size: [number, number, number];
+  rotation?: [number, number, number];
+  color?: string;
+  opacity?: number;
+}) {
+  return (
+    <mesh position={position} rotation={rotation} castShadow receiveShadow>
+      <boxGeometry args={size} />
+      <meshStandardMaterial
+        color={color}
+        transparent
+        opacity={opacity}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+      <Edges color="#93c5fd" threshold={15} />
+    </mesh>
+  );
+}
+
+function Doorway({ position, size, rotation = [0, 0, 0] }: { position: [number, number, number]; size: [number, number, number]; rotation?: [number, number, number] }) {
+  return (
+    <mesh position={position} rotation={rotation}>
+      <boxGeometry args={size} />
+      <meshStandardMaterial color="#334155" side={THREE.DoubleSide} />
+      <Edges color="#64748b" threshold={15} />
+    </mesh>
+  );
+}
+
+function Mezzanine({ position }: { position: [number, number, number] }) {
+  return (
+    <mesh position={position} castShadow receiveShadow>
+      <boxGeometry args={[4, 0.15, 2.5]} />
+      <meshStandardMaterial
+        color="#64748b"
+        transparent
+        opacity={0.5}
+        side={THREE.DoubleSide}
+      />
+      <Edges color="#94a3b8" threshold={15} />
+    </mesh>
+  );
+}
+
+function MeasurementPoint({
+  position,
+  label,
+  value,
+  onRemove,
+}: {
+  position: [number, number, number];
+  label: string;
+  value: string;
+  onRemove?: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <group position={position}>
+      <mesh
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove?.();
+        }}
+      >
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial
+          color={hovered ? '#f59e0b' : '#2563eb'}
+          emissive={hovered ? '#f59e0b' : '#1d4ed8'}
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      <Html center distanceFactor={8} style={{ pointerEvents: 'none' }}>
+        <div className="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-xs font-semibold transform -translate-y-1/2">
+          <div className="text-blue-200 text-[10px] leading-tight">{label}</div>
+          <div className="text-sm font-bold">{value}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function RoomGeometry({ hasMezzanine }: { hasMezzanine: boolean }) {
+  const wallHeight = 3.0;
+  const wallThickness = 0.15;
+  const roomW = 6;
+  const roomD = 8;
+  const bathW = 2.5;
+  const bathD = 2.0;
+
+  return (
+    <group>
+      {/* Floor base */}
+      <Floor />
+
+      {/* Main room walls */}
+      {/* Back wall */}
+      <Wall position={[0, wallHeight / 2, -roomD / 2]} size={[roomW, wallHeight, wallThickness]} />
+      {/* Front wall (left segment) */}
+      <Wall position={[-roomW / 2 + 0.9, wallHeight / 2, roomD / 2]} size={[1.8, wallHeight, wallThickness]} />
+      {/* Front wall (right segment) */}
+      <Wall position={[roomW / 2 - 1.1, wallHeight / 2, roomD / 2]} size={[2.2, wallHeight, wallThickness]} />
+      {/* Left wall */}
+      <Wall position={[-roomW / 2, wallHeight / 2, 0]} size={[wallThickness, wallHeight, roomD]} />
+      {/* Right wall (main room) */}
+      <Wall position={[roomW / 2, wallHeight / 2, -roomD / 2 + bathD / 2]} size={[wallThickness, wallHeight, roomD - bathD]} />
+
+      {/* Bathroom partition walls */}
+      {/* Bathroom back wall */}
+      <Wall position={[roomW / 2 - bathW / 2, wallHeight / 2, roomD / 2 - bathD]} size={[bathW, wallHeight, wallThickness]} />
+      {/* Bathroom right wall */}
+      <Wall position={[roomW / 2 - bathW, wallHeight / 2, roomD / 2 - bathD / 2]} size={[wallThickness, wallHeight, bathD]} />
+
+      {/* Door frame / gap */}
+      <Doorway position={[0, wallHeight / 2 - 0.5, roomD / 2 + 0.05]} size={[1.0, 2.0, wallThickness]} />
+
+      {/* Window on back wall */}
+      <mesh position={[0, wallHeight / 2 + 0.3, -roomD / 2 + 0.05]}>
+        <boxGeometry args={[2.5, 1.5, 0.05]} />
+        <meshStandardMaterial color="#bfdbfe" transparent opacity={0.6} side={THREE.DoubleSide} />
+        <Edges color="#2563eb" threshold={15} />
+      </mesh>
+
+      {/* Mezzanine */}
+      {hasMezzanine && (
+        <>
+          <Mezzanine position={[-roomW / 4, 2.0, -roomD / 4]} />
+          {/* Mezzanine support */}
+          <Wall position={[-roomW / 4 + 2, 1.0, -roomD / 4 + 1.25]} size={[0.1, 2.0, 0.1]} color="#475569" opacity={0.6} />
+          <Wall position={[-roomW / 4 + 2, 1.0, -roomD / 4 - 1.25]} size={[0.1, 2.0, 0.1]} color="#475569" opacity={0.6} />
+        </>
+      )}
+    </group>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Scene wrapper
+   ───────────────────────────────────────────────────────────── */
+
+function Scene({
+  hasMezzanine,
+  isMeasureMode,
+  markers,
+  onAddMarker,
+}: {
+  hasMezzanine: boolean;
+  isMeasureMode: boolean;
+  markers: MeasurementMarker[];
+  onAddMarker: (marker: MeasurementMarker) => void;
+}) {
+  const { camera, gl } = useThree();
+
+  const handlePointerDown = useCallback(
+    (event: THREE.Event) => {
+      if (!isMeasureMode) return;
+      const e = event as unknown as { point: THREE.Vector3; stopPropagation: () => void };
+      e.stopPropagation();
+      const point = e.point;
+
+      const randomMeasurements = [
+        { label: 'Chiều rộng tường', value: `${(2 + Math.random() * 3).toFixed(1)}m` },
+        { label: 'Chiều cao', value: `${(2.5 + Math.random() * 2).toFixed(1)}m` },
+        { label: 'Khoảng cách', value: `${(1 + Math.random() * 4).toFixed(1)}m` },
+        { label: 'Chiều rộng cửa', value: `${(0.8 + Math.random() * 0.6).toFixed(1)}m` },
+        { label: 'Diện tích', value: `${(2 + Math.random() * 5).toFixed(1)}m²` },
+      ];
+      const randomMeasure = randomMeasurements[Math.floor(Math.random() * randomMeasurements.length)];
+
+      onAddMarker({
+        id: Math.random().toString(36).slice(2),
+        position: [point.x, point.y, point.z],
+        label: randomMeasure.label,
+        value: randomMeasure.value,
+      });
+    },
+    [isMeasureMode, onAddMarker]
+  );
+
+  return (
+    <>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[10, 15, 10]} intensity={1.2} castShadow />
+      <directionalLight position={[-10, 8, -5]} intensity={0.4} />
+      <pointLight position={[0, 5, 0]} intensity={0.3} color="#3b82f6" />
+
+      <group onPointerDown={handlePointerDown}>
+        <RoomGeometry hasMezzanine={hasMezzanine} />
+      </group>
+
+      {markers.map((m) => (
+        <MeasurementPoint
+          key={m.id}
+          position={m.position}
+          label={m.label}
+          value={m.value}
+          onRemove={() => onAddMarker(m)} // we re-filter in parent
+        />
+      ))}
+
+      <OrbitControls
+        makeDefault
+        enableDamping
+        dampingFactor={0.08}
+        maxPolarAngle={Math.PI / 2 - 0.05}
+        minDistance={3}
+        maxDistance={25}
+        target={[0, 1.5, 0]}
+        enablePan
+        panSpeed={0.8}
+        rotateSpeed={0.6}
+        zoomSpeed={1.0}
+      />
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Modal
+   ───────────────────────────────────────────────────────────── */
+
 const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isMeasureMode, setIsMeasureMode] = useState(false);
-  const [rotation, setRotation] = useState({ x: 15, y: -15 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  const [activeMeasurement, setActiveMeasurement] = useState<Measurement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [markers, setMarkers] = useState<MeasurementMarker[]>([]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isMeasureMode) return;
-    setIsDragging(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  }, [isMeasureMode]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || isMeasureMode) return;
-
-    const deltaX = e.clientX - lastMousePos.x;
-    const deltaY = e.clientY - lastMousePos.y;
-
-    setRotation(prev => ({
-      x: Math.max(-45, Math.min(45, prev.x - deltaY * 0.5)),
-      y: prev.y + deltaX * 0.5
-    }));
-
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  }, [isDragging, isMeasureMode, lastMousePos]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+  const handleAddMarker = useCallback((marker: MeasurementMarker) => {
+    setMarkers((prev) => {
+      const exists = prev.find((m) => m.id === marker.id);
+      if (exists) {
+        return prev.filter((m) => m.id !== marker.id);
+      }
+      return [...prev, marker];
+    });
   }, []);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isMeasureMode) return;
-    setIsDragging(true);
-    setLastMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-  }, [isMeasureMode]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || isMeasureMode) return;
-
-    const deltaX = e.touches[0].clientX - lastMousePos.x;
-    const deltaY = e.touches[0].clientY - lastMousePos.y;
-
-    setRotation(prev => ({
-      x: Math.max(-45, Math.min(45, prev.x - deltaY * 0.5)),
-      y: prev.y + deltaX * 0.5
-    }));
-
-    setLastMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-  }, [isDragging, isMeasureMode, lastMousePos]);
-
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isMeasureMode || !canvasRef.current) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    const randomMeasurements = [
-      { label: 'Chiều rộng tường', value: `${(2 + Math.random() * 3).toFixed(1)}m` },
-      { label: 'Chiều cao', value: `${(2.5 + Math.random() * 2).toFixed(1)}m` },
-      { label: 'Khoảng cách', value: `${(1 + Math.random() * 4).toFixed(1)}m` },
-      { label: 'Chiều rộng cửa', value: `${(0.8 + Math.random() * 0.6).toFixed(1)}m` },
-      { label: 'Diện tích', value: `${(2 + Math.random() * 5).toFixed(1)}m²` },
-    ];
-
-    const randomMeasure = randomMeasurements[Math.floor(Math.random() * randomMeasurements.length)];
-
-    const newMeasurement: Measurement = {
-      x,
-      y,
-      label: randomMeasure.label,
-      value: randomMeasure.value
-    };
-
-    setActiveMeasurement(newMeasurement);
-
-    setTimeout(() => {
-      setActiveMeasurement(null);
-    }, 3000);
-  }, [isMeasureMode]);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const drawRoom = () => {
-      const width = canvas.width;
-      const height = canvas.height;
-
-      ctx.clearRect(0, 0, width, height);
-
-      // Background gradient
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-      bgGradient.addColorStop(0, '#f8fafc');
-      bgGradient.addColorStop(1, '#e2e8f0');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      const roomWidth = width * 0.5;
-      const roomHeight = height * 0.4;
-      const roomDepth = width * 0.15;
-
-      const centerX = width / 2;
-      const centerY = height * 0.55;
-
-      const rotateX = rotation.x * Math.PI / 180;
-      const rotateY = rotation.y * Math.PI / 180;
-
-      ctx.save();
-      ctx.translate(centerX, centerY);
-
-      // Floor
-      ctx.beginPath();
-      ctx.moveTo(-roomWidth/2 + Math.sin(rotateY) * roomDepth, roomHeight/2 - Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(roomWidth/2 + Math.sin(rotateY) * roomDepth, roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(roomWidth/2 - Math.sin(rotateY) * roomDepth, -roomHeight/2 - Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(-roomWidth/2 - Math.sin(rotateY) * roomDepth, -roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.closePath();
-
-      const floorGradient = ctx.createLinearGradient(0, -roomHeight/2, 0, roomHeight/2);
-      floorGradient.addColorStop(0, '#d4c4b1');
-      floorGradient.addColorStop(1, '#c9b896');
-      ctx.fillStyle = floorGradient;
-      ctx.fill();
-      ctx.strokeStyle = '#a89878';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Back wall
-      ctx.beginPath();
-      ctx.moveTo(-roomWidth/2, -roomHeight/2);
-      ctx.lineTo(-roomWidth/2 + Math.sin(rotateY) * roomDepth, roomHeight/2 - Math.sin(rotateX) * roomDepth);
-
-      const wallGradient = ctx.createLinearGradient(-roomWidth/2, 0, roomWidth/2, 0);
-      wallGradient.addColorStop(0, '#f5f0eb');
-      wallGradient.addColorStop(0.5, '#ffffff');
-      wallGradient.addColorStop(1, '#f5f0eb');
-      ctx.fillStyle = wallGradient;
-      ctx.fill();
-      ctx.stroke();
-
-      // Left wall
-      ctx.beginPath();
-      ctx.moveTo(-roomWidth/2 - Math.sin(rotateY) * roomDepth, -roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(-roomWidth/2, -roomHeight/2);
-      ctx.lineTo(-roomWidth/2 + Math.sin(rotateY) * roomDepth, roomHeight/2 - Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(-roomWidth/2 - Math.sin(rotateY) * roomDepth, roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.closePath();
-      ctx.fillStyle = room.hasMezzanine ? '#e8e4df' : '#faf7f4';
-      ctx.fill();
-      ctx.stroke();
-
-      // Right wall
-      ctx.beginPath();
-      ctx.moveTo(roomWidth/2 + Math.sin(rotateY) * roomDepth, roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(roomWidth/2, roomHeight/2);
-      ctx.lineTo(roomWidth/2 - Math.sin(rotateY) * roomDepth, -roomHeight/2 - Math.sin(rotateX) * roomDepth);
-      ctx.lineTo(roomWidth/2 + Math.sin(rotateY) * roomDepth, -roomHeight/2 + Math.sin(rotateX) * roomDepth);
-      ctx.closePath();
-      ctx.fillStyle = '#faf7f4';
-      ctx.fill();
-      ctx.stroke();
-
-      // Mezzanine
-      if (room.hasMezzanine) {
-        const mezHeight = roomHeight * 0.35;
-        ctx.beginPath();
-        ctx.moveTo(-roomWidth/3, -roomHeight/4 + mezHeight);
-        ctx.lineTo(roomWidth/4, -roomHeight/4 + mezHeight);
-        ctx.lineTo(roomWidth/4 + Math.sin(rotateY) * roomDepth/2, -roomHeight/4);
-        ctx.lineTo(-roomWidth/3 + Math.sin(rotateY) * roomDepth/2, -roomHeight/4);
-        ctx.closePath();
-        ctx.fillStyle = '#d4cab8';
-        ctx.fill();
-        ctx.strokeStyle = '#b8a898';
-        ctx.stroke();
-      }
-
-      // Window
-      const windowW = roomWidth * 0.25;
-      const windowH = roomHeight * 0.25;
-      ctx.beginPath();
-      ctx.rect(-windowW/2, -roomHeight/2 + 30, windowW, windowH);
-      ctx.fillStyle = '#bfdbfe';
-      ctx.fill();
-      ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Door
-      const doorW = roomWidth * 0.15;
-      const doorH = roomHeight * 0.4;
-      ctx.save();
-      ctx.transform(1, 0.2 * Math.sin(rotateX), 0, 1, 0, 0);
-      ctx.fillStyle = '#475569';
-      ctx.fillRect(-roomWidth/2 + 20, -doorH/2 + roomHeight/4, doorW, doorH);
-      ctx.restore();
-
-      // Bed
-      ctx.fillStyle = '#334155';
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 2;
-      const bedW = roomWidth * 0.3;
-      const bedH = roomHeight * 0.2;
-      ctx.fillRect(-roomWidth/4 - bedW/2, roomHeight/6 - bedH/2, bedW, bedH);
-      ctx.strokeRect(-roomWidth/4 - bedW/2, roomHeight/6 - bedH/2, bedW, bedH);
-
-      ctx.restore();
-
-      // Measurement points
-      room.measurements.forEach((m) => {
-        ctx.beginPath();
-        ctx.arc(
-          centerX + (m.x / 100 - 0.5) * roomWidth * 1.5,
-          centerY + (m.y / 100 - 0.5) * roomHeight * 1.5,
-          8,
-          0,
-          Math.PI * 2
-        );
-        ctx.fillStyle = '#2563eb';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
-
-      // Active measurement tooltip
-      if (activeMeasurement && isMeasureMode) {
-        const tooltipX = (activeMeasurement.x / 100) * width;
-        const tooltipY = (activeMeasurement.y / 100) * height;
-        const tooltipWidth = 140;
-        const tooltipHeight = 50;
-
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 10;
-
-        ctx.fillStyle = '#2563eb';
-        ctx.beginPath();
-        ctx.roundRect(tooltipX - tooltipWidth/2, tooltipY - tooltipHeight - 10, tooltipWidth, tooltipHeight, 8);
-        ctx.fill();
-
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(activeMeasurement.label, tooltipX, tooltipY - tooltipHeight + 20);
-        ctx.font = '16px Inter, sans-serif';
-        ctx.fillText(activeMeasurement.value, tooltipX, tooltipY - tooltipHeight + 40);
-        ctx.restore();
-      }
-    };
-
-    drawRoom();
-  }, [rotation, room, activeMeasurement, isMeasureMode]);
-
   const resetView = () => {
-    setRotation({ x: 15, y: -15 });
+    setMarkers([]);
   };
 
   const getAmenityLabel = (id: string) => {
-    const amenity = AMENITIES.find(a => a.id === id);
+    const amenity = AMENITIES.find((a) => a.id === id);
     return amenity?.label || id;
   };
 
@@ -294,10 +309,7 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
             <h3 className="text-xl md:text-2xl font-bold text-slate-900">{room.name}</h3>
             <p className="text-slate-500 mt-1">{room.address}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -305,7 +317,7 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="grid lg:grid-cols-2 gap-6 p-4 md:p-6">
-            {/* Left - Image Gallery */}
+            {/* Left - Image Gallery & Info */}
             <div className="space-y-4">
               <div className="relative aspect-video rounded-xl overflow-hidden">
                 <img
@@ -318,7 +330,6 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
                 </div>
               </div>
 
-              {/* Thumbnails */}
               <div className="flex gap-2">
                 {room.images.map((img, idx) => (
                   <button
@@ -333,7 +344,6 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
                 ))}
               </div>
 
-              {/* Room Info */}
               <div className="bg-slate-50 rounded-xl p-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
@@ -346,33 +356,35 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
                   </div>
                   <div>
                     <p className="flex items-center justify-center gap-1 text-xl font-bold text-slate-900">
-                      <Bed className="w-5 h-5" />{room.bedrooms}
-                      <Bath className="w-5 h-5 ml-2" />{room.bathrooms}
+                      <Bed className="w-5 h-5" />
+                      {room.bedrooms}
+                      <Bath className="w-5 h-5 ml-2" />
+                      {room.bathrooms}
                     </p>
                     <p className="text-sm text-slate-500">PN / WC</p>
                   </div>
                 </div>
               </div>
 
-              {/* Amenities */}
               <div>
                 <h4 className="font-semibold text-slate-900 mb-3">Tiện ích nội thất</h4>
                 <div className="flex flex-wrap gap-2">
                   {room.amenities.map((amenity) => (
-                    <span key={amenity} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                    <span
+                      key={amenity}
+                      className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+                    >
                       {getAmenityLabel(amenity)}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Description */}
               <div>
                 <h4 className="font-semibold text-slate-900 mb-2">Mô tả chi tiết</h4>
                 <p className="text-slate-600 leading-relaxed">{room.description}</p>
               </div>
 
-              {/* Landlord Info */}
               <div className="bg-blue-50 rounded-xl p-4">
                 <h4 className="font-semibold text-slate-900 mb-2">Thông tin chủ phòng</h4>
                 <div className="flex items-center justify-between">
@@ -380,9 +392,7 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
                     <p className="font-medium text-slate-900">{room.landlordName}</p>
                     <p className="text-sm text-blue-600">{room.landlordPhone}</p>
                   </div>
-                  <button className="btn-primary text-sm py-2 px-4">
-                    Gọi ngay
-                  </button>
+                  <button className="btn-primary text-sm py-2 px-4">Gọi ngay</button>
                 </div>
               </div>
             </div>
@@ -416,36 +426,41 @@ const Room3DModal: React.FC<Room3DModalProps> = ({ room, onClose }) => {
                   </div>
                 </div>
 
-                <div
-                  className="relative aspect-square cursor-grab active:cursor-grabbing"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleMouseUp}
-                >
-                  <canvas
-                    ref={canvasRef}
-                    width={500}
-                    height={500}
-                    className="w-full h-full"
-                    onClick={handleCanvasClick}
-                  />
+                <div className="relative aspect-square">
+                  <Canvas
+                    shadows
+                    camera={{ position: [8, 6, 10], fov: 50, near: 0.1, far: 100 }}
+                    gl={{ antialias: true, alpha: false }}
+                    style={{ background: '#0f172a' }}
+                  >
+                    <Scene
+                      hasMezzanine={room.hasMezzanine}
+                      isMeasureMode={isMeasureMode}
+                      markers={markers}
+                      onAddMarker={handleAddMarker}
+                    />
+                  </Canvas>
+
+                  {/* Floating instruction overlay */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-center pointer-events-none">
+                    <div className="bg-slate-900/80 backdrop-blur-sm text-slate-300 px-4 py-2 rounded-lg text-xs flex items-center gap-2 border border-slate-700/50">
+                      <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
+                      Sử dụng chuột/cảm ứng để xoay, thu phóng và xem bố cục kiến trúc.
+                    </div>
+                  </div>
 
                   {isMeasureMode && (
-                    <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium animate-pulse-soft">
-                      <Info className="w-4 h-4 inline mr-2" />
-                      Click vào phòng để đo
+                    <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium animate-pulse flex items-center gap-2 pointer-events-none">
+                      <Info className="w-4 h-4" />
+                      Click vào tường/sàn để đo
                     </div>
                   )}
 
-                  <div className="absolute bottom-4 left-4 right-4 text-center text-sm text-slate-400">
-                    {isMeasureMode
-                      ? 'Chế độ đo: Click vào các vị trí để xem kích thước'
-                      : 'Kéo thả để xoay phòng 360°'}
-                  </div>
+                  {markers.length > 0 && (
+                    <div className="absolute top-4 right-4 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs font-medium pointer-events-none border border-slate-700">
+                      {markers.length} điểm đo
+                    </div>
+                  )}
                 </div>
               </div>
 
