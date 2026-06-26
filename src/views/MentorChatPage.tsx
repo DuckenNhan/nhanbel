@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Send,
@@ -6,13 +7,16 @@ import {
   CheckCircle,
   Phone,
   Video,
-  MoreVertical
+  MoreVertical,
+  Home,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { formatCurrency } from '../utils/helpers';
 
 interface MentorChatPageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface Message {
@@ -22,12 +26,26 @@ interface Message {
   timestamp: Date;
 }
 
-const MentorChatPage: React.FC<MentorChatPageProps> = ({ onBack }) => {
+interface PropertyContext {
+  id: string;
+  name: string;
+  address: string;
+  price: number;
+}
+
+interface LocationState {
+  propertyContext?: PropertyContext;
+}
+
+const MentorChatPage: React.FC<MentorChatPageProps> = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [propertyContext, setPropertyContext] = useState<PropertyContext | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,26 +56,63 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({ onBack }) => {
     specialty: 'Tư vấn phòng trọ tại TP.HCM'
   };
 
-  // Initial mentor messages
-  const initialMessages: Message[] = [
-    {
-      id: '1',
-      text: 'Chào bạn! Mình là Mentor hỗ trợ tìm trọ an toàn tại khu vực Sài Gòn (TP.HCM). Mình có thể giúp bạn kiểm tra thông tin chủ nhà và lọc ra các khu trọ an ninh nhất.',
-      sender: 'mentor',
-      timestamp: new Date(Date.now() - 60000 * 5)
-    },
-    {
-      id: '2',
-      text: 'Bạn đang ưu tiên tìm trọ ở quận nào và mức tài chính khoảng bao nhiêu để mình tư vấn nhé?',
-      sender: 'mentor',
-      timestamp: new Date(Date.now() - 60000 * 4)
-    }
-  ];
-
   useEffect(() => {
-    // Load initial messages
-    setMessages(initialMessages);
-  }, []);
+    // Check for property context from navigation state
+    const state = location.state as LocationState | undefined;
+    if (state?.propertyContext) {
+      setPropertyContext(state.propertyContext);
+
+      // Add initial messages with property context
+      const initialMessages: Message[] = [
+        {
+          id: '1',
+          text: 'Chào bạn! Mình là Mentor hỗ trợ tìm trọ an toàn tại khu vực Sài Gòn (TP.HCM). Mình có thể giúp bạn kiểm tra thông tin chủ nhà và lọc ra các khu trọ an ninh nhất.',
+          sender: 'mentor',
+          timestamp: new Date(Date.now() - 60000 * 5)
+        },
+        {
+          id: '2',
+          text: 'Bạn đang ưu tiên tìm trọ ở quận nào và mức tài chính khoảng bao nhiêu để mình tư vấn nhé?',
+          sender: 'mentor',
+          timestamp: new Date(Date.now() - 60000 * 4)
+        }
+      ];
+
+      // Add user's contextual message
+      const userMessage: Message = {
+        id: '3',
+        text: `Chào Mentor, mình muốn tư vấn thêm về phòng trọ tại ${state.propertyContext.address}. Phòng này có an ninh và đúng giá không ạ?`,
+        sender: 'user',
+        timestamp: new Date(Date.now() - 60000 * 3)
+      };
+
+      // Add mentor's response
+      const mentorResponse: Message = {
+        id: '4',
+        text: `Chào bạn, mình đã nhận được thông tin. Phòng tại ${state.propertyContext.address} này đã được quét 3D xác thực. Bạn muốn hỏi thêm về giờ giấc hay điện nước?`,
+        sender: 'mentor',
+        timestamp: new Date(Date.now() - 60000 * 2)
+      };
+
+      setMessages([...initialMessages, userMessage, mentorResponse]);
+    } else {
+      // Standard initial messages without property context
+      setMessages([
+        {
+          id: '1',
+          text: 'Chào bạn! Mình là Mentor hỗ trợ tìm trọ an toàn tại khu vực Sài Gòn (TP.HCM). Mình có thể giúp bạn kiểm tra thông tin chủ nhà và lọc ra các khu trọ an ninh nhất.',
+          sender: 'mentor',
+          timestamp: new Date(Date.now() - 60000 * 5)
+        },
+        {
+          id: '2',
+          text: 'Bạn đang ưu tiên tìm trọ ở quận nào và mức tài chính khoảng bao nhiêu để mình tư vấn nhé?',
+          sender: 'mentor',
+          timestamp: new Date(Date.now() - 60000 * 4)
+        }
+      ]);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     // Auto scroll to bottom when new messages arrive
@@ -121,15 +176,19 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({ onBack }) => {
     showToast('Tính năng video call sẽ sớm được cập nhật!', 'info');
   };
 
+  const handleBack = () => {
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pt-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-16 md:top-20 z-30 shadow-sm">
+      <header className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-center gap-4">
             {/* Back button */}
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-slate-600" />
@@ -179,6 +238,28 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({ onBack }) => {
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-6">
+          {/* Property Context Card */}
+          {propertyContext && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Home className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-blue-600 font-medium mb-1">Bạn đang hỏi về phòng trọ này:</p>
+                  <h3 className="font-semibold text-slate-900 mb-1">{propertyContext.name}</h3>
+                  <p className="text-sm text-slate-600 flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {propertyContext.address}
+                  </p>
+                  <p className="text-blue-600 font-semibold mt-2">
+                    {formatCurrency(propertyContext.price)}/tháng
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Mentor info card */}
           <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-100">
             <div className="flex items-center gap-4">

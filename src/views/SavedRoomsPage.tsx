@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Heart,
   MapPin,
@@ -7,16 +8,16 @@ import {
   Eye,
   Trash2,
   Phone,
-  Calendar,
-  Search
+  Calendar
 } from 'lucide-react';
-import { ROOM_LISTINGS, formatCurrency, RoomListing, AMENITIES } from '../utils/helpers';
+import { ROOM_LISTINGS, formatCurrency, AMENITIES } from '../utils/helpers';
 import { useSavedRooms } from '../context/SavedRoomsContext';
 import { useToast } from '../context/ToastContext';
 import Room3DModal from '../components/Room3DModal';
 
 const SavedRoomsPage: React.FC = () => {
-  const { savedRoomIds, unsaveRoom, isRoomSaved } = useSavedRooms();
+  const navigate = useNavigate();
+  const { isRoomSaved, unsaveRoom } = useSavedRooms();
   const { showToast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<RoomListing | null>(null);
 
@@ -28,13 +29,17 @@ const SavedRoomsPage: React.FC = () => {
     showToast('Đã xóa khỏi danh sách yêu thích', 'success');
   };
 
+  const handleCardClick = (roomId: string) => {
+    navigate(`/room/${roomId}`);
+  };
+
   const getAmenityLabel = (id: string) => {
     return AMENITIES.find(a => a.id === id)?.label || id;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-6">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -58,7 +63,10 @@ const SavedRoomsPage: React.FC = () => {
             <p className="text-slate-500 max-w-md mx-auto mb-6">
               Hãy tìm và lưu những phòng trọ ưng ý. Danh sách này sẽ giúp bạn dễ dàng so sánh và quyết định sau này.
             </p>
-            <button className="btn-primary">
+            <button
+              onClick={() => navigate('/search')}
+              className="btn-primary"
+            >
               Tìm phòng ngay
             </button>
           </div>
@@ -93,7 +101,11 @@ const SavedRoomsPage: React.FC = () => {
             {/* Rooms List */}
             <div className="space-y-4">
               {savedRooms.map(room => (
-                <div key={room.id} className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden border border-slate-100">
+                <div
+                  key={room.id}
+                  onClick={() => handleCardClick(room.id)}
+                  className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden border border-slate-100 cursor-pointer hover:shadow-xl transition-all"
+                >
                   <div className="flex flex-col md:flex-row">
                     {/* Image */}
                     <div className="md:w-80 aspect-video md:aspect-auto relative">
@@ -114,7 +126,10 @@ const SavedRoomsPage: React.FC = () => {
                         )}
                       </div>
                       <button
-                        onClick={() => handleRemove(room.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(room.id);
+                        }}
                         className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -125,7 +140,7 @@ const SavedRoomsPage: React.FC = () => {
                     <div className="flex-1 p-5">
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-slate-900 mb-1">{room.name}</h3>
+                          <h3 className="text-lg font-semibold text-slate-900 mb-1 hover:text-blue-600 transition-colors">{room.name}</h3>
                           <p className="text-slate-500 flex items-center gap-1 mb-3">
                             <MapPin className="w-4 h-4" />
                             {room.address}
@@ -152,7 +167,7 @@ const SavedRoomsPage: React.FC = () => {
                           </div>
 
                           {/* Amenities */}
-                          <div className="flex flex-wrap gap-1.5 mb-4">
+                          <div className="flex flex-wrap gap-1.5">
                             {room.amenities.slice(0, 5).map(amenity => (
                               <span key={amenity} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">
                                 {getAmenityLabel(amenity)}
@@ -167,7 +182,7 @@ const SavedRoomsPage: React.FC = () => {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-col gap-2 md:min-w-[160px]">
+                        <div className="flex flex-col gap-2 md:min-w-[160px]" onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => setSelectedRoom(room)}
                             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm"

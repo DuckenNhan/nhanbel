@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   MessageCircle,
@@ -8,12 +9,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-interface RenterDashboardPageProps {
-  onNavigate: (view: 'search' | 'saved' | 'mentor') => void;
-}
-
-const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onNavigate }) => {
+const RenterDashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const currentTime = new Date().getHours();
   const greeting = currentTime < 12 ? 'Chào buổi sáng' : currentTime < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
@@ -28,7 +26,7 @@ const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onNavigate })
       iconColor: 'text-white',
       cardBg: 'bg-gradient-to-br from-blue-50 to-slate-50',
       borderHover: 'hover:border-blue-300',
-      view: 'search' as const
+      path: '/search'
     },
     {
       id: 'mentor',
@@ -40,13 +38,13 @@ const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onNavigate })
       iconColor: 'text-white',
       cardBg: 'bg-gradient-to-br from-slate-50 to-blue-50',
       borderHover: 'hover:border-slate-400',
-      view: 'mentor' as const
+      path: '/mentor'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-6">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Welcome Section */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-2">
@@ -68,7 +66,7 @@ const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onNavigate })
               return (
                 <button
                   key={action.id}
-                  onClick={() => onNavigate(action.view)}
+                  onClick={() => navigate(action.path)}
                   className={`relative overflow-hidden rounded-2xl border-2 border-slate-200 ${action.borderHover} bg-white p-8 text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group`}
                 >
                   {/* Background gradient */}
@@ -153,7 +151,7 @@ const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onNavigate })
                 </p>
               </div>
               <button
-                onClick={() => onNavigate('mentor')}
+                onClick={() => navigate('/mentor')}
                 className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-all shadow-lg flex items-center gap-2"
               >
                 <MessageCircle className="w-5 h-5" />
