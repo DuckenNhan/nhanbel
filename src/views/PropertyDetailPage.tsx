@@ -16,7 +16,11 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Tag,
+  X,
+  Loader2,
+  Send
 } from 'lucide-react';
 import { ROOM_LISTINGS, AMENITIES, formatCurrency, RoomListing } from '../utils/helpers';
 import { useSavedRooms } from '../context/SavedRoomsContext';
@@ -30,6 +34,10 @@ const PropertyDetailPage: React.FC = () => {
   const { showToast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [show3DModal, setShow3DModal] = useState(false);
+  const [showNegotiationModal, setShowNegotiationModal] = useState(false);
+  const [negotiationPrice, setNegotiationPrice] = useState('');
+  const [negotiationMessage, setNegotiationMessage] = useState('');
+  const [isNegotiationLoading, setIsNegotiationLoading] = useState(false);
 
   const room = ROOM_LISTINGS.find(r => r.id === id);
   const isSaved = room ? isRoomSaved(room.id) : false;
@@ -67,7 +75,6 @@ const PropertyDetailPage: React.FC = () => {
   };
 
   const handleConsult = () => {
-    // Navigate to mentor with property context
     navigate('/mentor', {
       state: {
         propertyContext: {
@@ -79,6 +86,34 @@ const PropertyDetailPage: React.FC = () => {
       }
     });
   };
+
+  const handleNegotiationSubmit = () => {
+    if (!negotiationPrice) {
+      showToast('Vui lòng nhập mức giá đề xuất', 'error');
+      return;
+    }
+    setIsNegotiationLoading(true);
+    setTimeout(() => {
+      setIsNegotiationLoading(false);
+      setShowNegotiationModal(false);
+      setNegotiationPrice('');
+      setNegotiationMessage('');
+      showToast('Đề xuất của bạn đã được gửi đến chủ trọ. Vui lòng chờ phản hồi trong vòng 24h!', 'success');
+    }, 1500);
+  };
+
+  const handleTemplateClick = (text: string) => {
+    setNegotiationMessage((prev) => {
+      const separator = prev.trim() ? prev.trim() + ' ' : '';
+      return separator + text;
+    });
+  };
+
+  const negotiationTemplates = [
+    'Mình là sinh viên thuê dài hạn (cam kết ở trên 1 năm), mong chủ nhà hỗ trợ giảm chút đỉnh ạ.',
+    'Mình có thể thanh toán trước tiền nhà 6 tháng/lần, không biết giá có được ưu đãi hơn không?',
+    'Mình ở một mình, ít đồ đạc và cam kết giữ gìn phòng sạch sẽ, hy vọng chốt được mức giá này.',
+  ];
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -292,6 +327,13 @@ const PropertyDetailPage: React.FC = () => {
                 <MessageCircle className="w-5 h-5" />
                 Tư vấn về phòng này
               </button>
+              <button
+                onClick={() => setShowNegotiationModal(true)}
+                className="w-full flex items-center justify-center gap-2 py-4 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold rounded-xl transition-all"
+              >
+                <Tag className="w-5 h-5" />
+                Thương lượng giá thuê
+              </button>
               <button className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all">
                 <Phone className="w-5 h-5" />
                 Gọi chủ phòng
@@ -332,6 +374,116 @@ const PropertyDetailPage: React.FC = () => {
           room={room}
           onClose={() => setShow3DModal(false)}
         />
+      )}
+
+      {/* Price Negotiation Modal */}
+      {showNegotiationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">Đề xuất mức giá của bạn</h3>
+              <button
+                onClick={() => setShowNegotiationModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 md:p-6 space-y-5">
+              {/* Current Price */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-sm text-slate-500 mb-1">Giá niêm yết</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-slate-900">{formatCurrency(room.price)}</span>
+                  <span className="text-slate-500">/tháng</span>
+                </div>
+              </div>
+
+              {/* Proposed Price */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Mức giá đề xuất (VNĐ/tháng)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={negotiationPrice}
+                    onChange={(e) => setNegotiationPrice(e.target.value)}
+                    placeholder="Nhập mức giá bạn muốn đề xuất..."
+                    className="input-field text-lg font-semibold"
+                    min="0"
+                    step="100000"
+                  />
+                  {negotiationPrice && Number(negotiationPrice) < room.price && (
+                    <p className="mt-1.5 text-sm text-blue-600 font-medium">
+                      Giảm {formatCurrency(room.price - Number(negotiationPrice))} so với giá gốc
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Lý do / Điều kiện đi kèm để được giảm giá
+                </label>
+                <textarea
+                  value={negotiationMessage}
+                  onChange={(e) => setNegotiationMessage(e.target.value)}
+                  placeholder="Nhập lý do hoặc điều kiện để được giảm giá..."
+                  rows={4}
+                  className="input-field resize-none"
+                />
+              </div>
+
+              {/* Smart Templates */}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Mẫu câu thương lượng</p>
+                <div className="flex flex-col gap-2">
+                  {negotiationTemplates.map((template, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleTemplateClick(template)}
+                      className="text-left text-sm px-3 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 hover:border-blue-300 transition-all"
+                    >
+                      {template}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 md:p-6 border-t border-slate-100 flex items-center gap-3">
+              <button
+                onClick={() => setShowNegotiationModal(false)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleNegotiationSubmit}
+                disabled={isNegotiationLoading}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isNegotiationLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Đang gửi...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Gửi đề xuất
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
