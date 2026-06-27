@@ -21,7 +21,11 @@ import {
   X,
   Loader2,
   Send,
-  Star
+  Star,
+  ThumbsUp,
+  ThumbsDown,
+  Flag,
+  BadgeCheck
 } from 'lucide-react';
 import { ROOM_LISTINGS, AMENITIES, formatCurrency, RoomListing } from '../utils/helpers';
 import { useSavedRooms } from '../context/SavedRoomsContext';
@@ -241,14 +245,56 @@ const PropertyDetailPage: React.FC = () => {
             </button>
 
             {/* Rating Block */}
-            <div className="mt-4 flex items-center gap-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <div className="mt-6 flex items-center gap-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-              <span className="font-bold text-slate-900">4.8 / 5</span>
-              <span className="text-sm text-slate-500 ml-2">(124 đánh giá)</span>
+              <span className="font-bold text-slate-900 text-lg">4.8 / 5</span>
+              <span className="text-sm text-slate-500 ml-1">(124 đánh giá)</span>
+            </div>
+
+            {/* Comments Section */}
+            <h3 className="text-lg font-semibold mt-6 mb-4 text-slate-900">Đánh giá từ người thuê</h3>
+
+            {/* Mockup Comment */}
+            <div className="border border-slate-100 rounded-xl p-4 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+                  N
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900 text-sm">Nguyễn Văn A</p>
+                  <p className="text-sm text-slate-500">2 ngày trước</p>
+                </div>
+              </div>
+              <p className="mt-3 text-slate-700 text-sm leading-relaxed">
+                Phòng rộng rãi, thoáng mát y như mô hình 3D. Chủ nhà nhiệt tình hỗ trợ chuyển đồ.
+              </p>
+              <div className="mt-3 flex items-center gap-4">
+                <button className="flex items-center gap-1 text-sm text-slate-400 hover:text-blue-600 transition-colors">
+                  <ThumbsUp className="w-4 h-4" />
+                  <span>12</span>
+                </button>
+                <button className="flex items-center gap-1 text-sm text-slate-400 hover:text-blue-600 transition-colors">
+                  <ThumbsDown className="w-4 h-4" />
+                </button>
+                <button className="flex items-center gap-1 text-sm text-slate-400 hover:text-blue-600 transition-colors">
+                  <Flag className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Landlord Response */}
+              <div className="ml-10 mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <BadgeCheck className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-blue-900 text-sm">Chủ trọ</span>
+                </div>
+                <p className="text-sm text-blue-800">
+                  Cảm ơn bạn đã tin tưởng. Chúc bạn có trải nghiệm ở tuyệt vời nhé!
+                </p>
+              </div>
             </div>
           </div>
 
@@ -345,10 +391,6 @@ const PropertyDetailPage: React.FC = () => {
               >
                 <Tag className="w-5 h-5" />
                 Thương lượng giá thuê
-              </button>
-              <button className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all">
-                <Phone className="w-5 h-5" />
-                Gọi chủ phòng
               </button>
             </div>
           </div>
