@@ -173,7 +173,7 @@ const RenterLayout: React.FC = () => {
                     onClick={() => handleNavigate(item.path)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all ${
                       isActivePath(item.path)
-                        ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
+                        ? 'bg-blue-50 text-blue-700 font-medium'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >

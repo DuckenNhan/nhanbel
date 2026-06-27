@@ -22,10 +22,8 @@ const RenterDashboardPage: React.FC = () => {
       title: 'Tìm phòng trọ',
       description: 'Khám phá danh sách phòng trọ thực tế với mô hình 3D tương tác.',
       icon: Search,
-      iconBg: 'bg-blue-600',
-      iconColor: 'text-white',
-      cardBg: 'bg-gradient-to-br from-blue-50 to-slate-50',
-      borderHover: 'hover:border-blue-300',
+      iconBg: 'bg-blue-600 text-white shadow-sm',
+      cardClasses: 'bg-gradient-to-br from-blue-50/80 to-white border border-blue-100 rounded-2xl p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer',
       path: '/search'
     },
     {
@@ -34,10 +32,8 @@ const RenterDashboardPage: React.FC = () => {
       subtitle: 'Kết nối Người hướng dẫn',
       description: 'Trò chuyện 1:1 với Mentor để được tư vấn khu vực an toàn và tìm phòng chuẩn.',
       icon: MessageCircle,
-      iconBg: 'bg-slate-800',
-      iconColor: 'text-white',
-      cardBg: 'bg-gradient-to-br from-slate-50 to-blue-50',
-      borderHover: 'hover:border-slate-400',
+      iconBg: 'bg-slate-800 text-white shadow-sm',
+      cardClasses: 'bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer',
       path: '/mentor'
     }
   ];
@@ -67,35 +63,26 @@ const RenterDashboardPage: React.FC = () => {
                 <button
                   key={action.id}
                   onClick={() => navigate(action.path)}
-                  className={`relative overflow-hidden rounded-2xl border-2 border-slate-200 ${action.borderHover} bg-white p-8 text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group`}
+                  className={`${action.cardClasses} text-left group`}
                 >
-                  {/* Background gradient */}
-                  <div className={`absolute inset-0 opacity-50 ${action.cardBg}`} />
-
-                  {/* Content */}
-                  <div className="relative">
-                    <div className={`w-16 h-16 rounded-2xl ${action.iconBg} ${action.iconColor} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className="w-8 h-8" />
-                    </div>
-
-                    <h2 className="text-2xl font-bold text-slate-900 mb-1">
-                      {action.title}
-                    </h2>
-                    {action.subtitle && (
-                      <p className="text-blue-600 font-medium text-sm mb-3">{action.subtitle}</p>
-                    )}
-                    <p className="text-slate-600 mb-6 leading-relaxed">
-                      {action.description}
-                    </p>
-
-                    <div className="flex items-center gap-2 text-blue-600 font-semibold group-hover:gap-3 transition-all">
-                      <span>Truy cập ngay</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </div>
+                  <div className={`w-12 h-12 rounded-xl ${action.iconBg} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300`}>
+                    <Icon className="w-6 h-6" />
                   </div>
 
-                  {/* Decorative element */}
-                  <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full ${action.iconBg.replace('bg-', 'bg-').replace('600', '100').replace('800', '100')} opacity-30 group-hover:scale-150 transition-transform duration-500`} />
+                  <h2 className="text-xl font-bold text-slate-900 mb-1">
+                    {action.title}
+                  </h2>
+                  {action.subtitle && (
+                    <p className="text-blue-600 font-medium text-sm mb-2">{action.subtitle}</p>
+                  )}
+                  <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+                    {action.description}
+                  </p>
+
+                  <div className="flex items-center gap-2 text-blue-600 font-medium text-sm group-hover:gap-3 transition-all">
+                    <span>Truy cập ngay</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </button>
               );
             })}
@@ -104,12 +91,12 @@ const RenterDashboardPage: React.FC = () => {
 
         {/* Features Highlight */}
         <section className="mb-10">
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6 md:p-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-6">Tại sao chọn PhongTro3D?</h3>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3 flex-shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">Xác thực chủ trọ</h4>
@@ -118,8 +105,8 @@ const RenterDashboardPage: React.FC = () => {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-6 h-6 text-slate-700" />
+                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3 flex-shrink-0">
+                  <MapPin className="w-6 h-6" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">Mô hình 3D thực tế</h4>
@@ -128,8 +115,8 @@ const RenterDashboardPage: React.FC = () => {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3 flex-shrink-0">
+                  <MessageCircle className="w-6 h-6" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">Hỗ trợ 1:1</h4>
