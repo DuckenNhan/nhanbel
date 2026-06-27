@@ -193,19 +193,8 @@ const RenterLayout: React.FC = () => {
             </nav>
           </div>
 
-          {/* Featured Banner */}
-          <div className="p-4 mt-auto">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-white">
-              <h4 className="font-semibold mb-2">Cần hỗ trợ?</h4>
-              <p className="text-sm text-blue-100 mb-3">Chat với Mentor để được tư vấn miễn phí.</p>
-              <button
-                onClick={() => handleNavigate('/mentor')}
-                className="w-full py-2 bg-white text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                Chat ngay
-              </button>
-            </div>
-          </div>
+          {/* Sidebar footer spacer */}
+          <div className="mt-auto" />
         </div>
       </aside>
 

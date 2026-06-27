@@ -20,7 +20,8 @@ import {
   Tag,
   X,
   Loader2,
-  Send
+  Send,
+  Star
 } from 'lucide-react';
 import { ROOM_LISTINGS, AMENITIES, formatCurrency, RoomListing } from '../utils/helpers';
 import { useSavedRooms } from '../context/SavedRoomsContext';
@@ -238,6 +239,17 @@ const PropertyDetailPage: React.FC = () => {
               <Maximize2 className="w-5 h-5" />
               Xem bố cục 3D
             </button>
+
+            {/* Rating Block */}
+            <div className="mt-4 flex items-center gap-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <span className="font-bold text-slate-900">4.8 / 5</span>
+              <span className="text-sm text-slate-500 ml-2">(124 đánh giá)</span>
+            </div>
           </div>
 
           {/* Property Info */}

@@ -140,26 +140,7 @@ const RenterDashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Info Banner */}
-        <section>
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-blue-600/25">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">Cần hỗ trợ tìm phòng?</h3>
-                <p className="text-blue-100">
-                  Kết nối ngay với Mentor Hoàng Cường để được tư vấn khu vực an toàn và phòng trọ phù hợp với ngân sách của bạn.
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/mentor')}
-                className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-all shadow-lg flex items-center gap-2"
-              >
-                <MessageCircle className="w-5 h-5" />
-                Chat với Mentor
-              </button>
-            </div>
-          </div>
-        </section>
+
       </div>
     </div>
   );
